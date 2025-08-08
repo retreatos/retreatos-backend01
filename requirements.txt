@@ -6,3 +6,4 @@ python-jose
 pyjwt
 gunicorn
 requests
+psycopg2-binary
