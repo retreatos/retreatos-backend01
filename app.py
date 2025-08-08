@@ -1,76 +1,67 @@
 
-from flask import Flask, redirect, request, jsonify, session
+from flask import Flask, jsonify, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from authlib.integrations.flask_client import OAuth
-import jwt
 import os
-import datetime
 
 app = Flask(__name__)
-CORS(app)
-app.secret_key = os.getenv("APP_SECRET_KEY", "super-secret")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///retreatos.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "your-secret-key")
+
+# קונפיגורציית מסד נתונים
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///local.db")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
-oauth = OAuth(app)
+CORS(app)
 
-# הגדרות OAuth
+# הגדרת OAuth עם גוגל
+oauth = OAuth(app)
 google = oauth.register(
     name='google',
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url='https://accounts.google.com/o/oauth2/token',
+    access_token_url='https://oauth2.googleapis.com/token',
     access_token_params=None,
     authorize_url='https://accounts.google.com/o/oauth2/auth',
     authorize_params={'access_type': 'offline', 'prompt': 'consent'},
     api_base_url='https://www.googleapis.com/oauth2/v1/',
-    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',
     client_kwargs={'scope': 'openid email profile'},
 )
 
-# מודל משתמשים
+# מודל לדוגמה
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    google_id = db.Column(db.String(200), unique=True, nullable=False)
-    name = db.Column(db.String(100))
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    email = db.Column(db.String(255), unique=True, nullable=False)
 
-# מסלולים
+# נקודת בדיקה
 @app.route('/')
 def home():
-    return 'RetreatOS API with Google OAuth is running.'
+    return jsonify(message="Welcome to RetreatOS Backend")
 
-@app.route('/api/auth/google/login')
+# התחברות עם גוגל
+@app.route('/login')
 def login():
-    redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:5000/api/auth/google/callback")
+    redirect_uri = url_for('authorize', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-@app.route('/api/auth/google/callback')
-def callback():
+@app.route('/authorize')
+def authorize():
     token = google.authorize_access_token()
     resp = google.get('userinfo')
     user_info = resp.json()
-    user = User.query.filter_by(email=user_info['email']).first()
+    email = user_info['email']
 
+    user = User.query.filter_by(email=email).first()
     if not user:
-        user = User(
-            google_id=user_info['sub'],
-            name=user_info['name'],
-            email=user_info['email']
-        )
+        user = User(email=email)
         db.session.add(user)
         db.session.commit()
 
-    jwt_token = jwt.encode({
-        'user_id': user.id,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    }, app.secret_key, algorithm='HS256')
+    session['email'] = email
+    return jsonify(message=f"Logged in as {email}")
 
-    return jsonify({'token': jwt_token, 'user': {'name': user.name, 'email': user.email}})
-
+# הפעלת האפליקציה
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
