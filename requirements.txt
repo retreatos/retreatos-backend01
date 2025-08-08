@@ -5,3 +5,4 @@ authlib
 python-jose
 pyjwt
 gunicorn
+requests
