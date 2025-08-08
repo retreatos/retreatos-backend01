@@ -1,5 +1,5 @@
-flask
-flask_sqlalchemy
-flask_cors
-authlib
-gunicorn
+Flask==3.1.1
+Flask-Cors==6.0.1
+Flask-SQLAlchemy==3.1.1
+Authlib==1.2.1
+psycopg2-binary==2.9.9
