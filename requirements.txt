@@ -2,8 +2,4 @@ flask
 flask_sqlalchemy
 flask_cors
 authlib
-python-jose
-pyjwt
 gunicorn
-requests
-psycopg2-binary

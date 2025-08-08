@@ -1,4 +1,3 @@
-
 from flask import Flask, jsonify, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -61,7 +60,6 @@ def authorize():
     session['email'] = email
     return jsonify(message=f"Logged in as {email}")
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+# יצירת טבלאות במסד הנתונים
+with app.app_context():
+    db.create_all()
