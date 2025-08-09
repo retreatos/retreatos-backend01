@@ -7,14 +7,14 @@ import os
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "your-secret-key")
 
-# קונפיגורציית מסד נתונים
+# DB config
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///local.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 CORS(app)
 
-# הגדרת OAuth עם גוגל
+# OAuth (Google)
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
@@ -27,17 +27,14 @@ google = oauth.register(
     authorize_params={'access_type': 'offline', 'prompt': 'consent'},
 )
 
-# מודל לדוגמה
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
 
-# נקודת בדיקה
 @app.route('/')
 def home():
     return jsonify(message="Welcome to RetreatOS Backend")
 
-# התחברות עם גוגל
 @app.route('/login')
 def login():
     redirect_uri = url_for('authorize', _external=True)
@@ -56,11 +53,9 @@ def authorize():
         db.session.add(user)
         db.session.commit()
 
-    session['email'] = email
+    session['email'] = email}
     return jsonify(message=f"Logged in as {email}")
 
-# נקודת התחלה
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+# Create tables when app is imported (works with gunicorn)
+with app.app_context():
+    db.create_all()
